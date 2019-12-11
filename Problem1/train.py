@@ -98,7 +98,7 @@ if __name__ == '__main__':
                 frames_res = torch.from_numpy(frames)
                 frames_res.resize_(len(frames), 3, 240, 240)
                 frames_res = frames_res.float().cuda()
-                print(feature_stractor(frames_res).shape)
+                print(feature_stractor(frames_res).shape, end="\r")
                 features.append(torch.mean(feature_stractor(frames_res), 0).cpu().detach().numpy())
                 clss.append(int(video.get('Action_labels')[i]))
             features = torch.from_numpy(np.asarray(features))
