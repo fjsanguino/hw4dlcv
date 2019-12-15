@@ -8,7 +8,7 @@ def arg_parse():
 
 
     # Datasets parameters
-    parser.add_argument('--data_dir', type=str, default='../hw4_data',#../hw4-rmanzanedo/hw4_data',
+    parser.add_argument('--data_dir', type=str, default='../../hw4-rmanzanedo/hw4_data',
                         help="root path to data directory")
     parser.add_argument('--workers', default=4, type=int,
                         help="number of data loading workers (default: 4)")
