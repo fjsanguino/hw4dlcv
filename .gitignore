@@ -1,3 +1,4 @@
 hw4_data
 HW4.pdf
+*.pth.tar
 !Problem1/log/Classifier/model_1_class.pth.tar

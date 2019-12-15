@@ -47,8 +47,8 @@ if __name__ == '__main__':
     ''' load dataset and prepare data loader '''
     print('===> prepare dataloader ...')
     train_loader = torch.utils.data.DataLoader(data.DATA(args, mode='train'),
-                                               batch_size=32,
-                                               num_workers=4,
+                                               batch_size=args.train_batch,
+                                               num_workers=args.workers,
                                                shuffle=True)
     val_loader = torch.utils.data.DataLoader(data.DATA(args, mode='valid'),
                                              batch_size=args.train_batch,
@@ -98,7 +98,7 @@ if __name__ == '__main__':
                 frames_res = torch.from_numpy(frames)
                 frames_res.resize_(len(frames), 3, 240, 240)
                 frames_res = frames_res.float().cuda()
-                print(feature_stractor(frames_res).shape, end="\r")
+                print(feature_stractor(frames_res).shape)#, end="\r")
                 features.append(torch.mean(feature_stractor(frames_res), 0).cpu().detach().numpy())
                 clss.append(int(video.get('Action_labels')[i]))
             features = torch.from_numpy(np.asarray(features))

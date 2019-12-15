@@ -8,7 +8,7 @@ def arg_parse():
 
 
     # Datasets parameters
-    parser.add_argument('--data_dir', type=str, default='../../hw4-rmanzanedo/hw4_data',
+    parser.add_argument('--data_dir', type=str, default='../hw4_data',#../../rmanzanedo/hw4_data,
                         help="root path to data directory")
     parser.add_argument('--workers', default=4, type=int,
                         help="number of data loading workers (default: 4)")
@@ -19,7 +19,7 @@ def arg_parse():
 
     parser.add_argument('--epoch', default=100, type=int,
                         help="num of validation iterations")
-    parser.add_argument('--val_epoch', default=10, type=int,
+    parser.add_argument('--val_epoch', default=1, type=int,
                         help="num of validation iterations")
     parser.add_argument('--train_batch', default=1, type=int,
                         help="train batch size")
