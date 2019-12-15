@@ -18,21 +18,24 @@ def output_features(classi, feaStract, data_loader, json_dir):
     feaStract.eval()
     with torch.no_grad():  # do not need to caculate information for gradient during eval
         data = []
+
         for idx, (video, video_path) in enumerate(data_loader):
+
+
             features = []
             clss = []
             print('Preprocessing the data')
             for i in range(len(video_path)):
-                # print('working ', i)
+                print('working ', i)
                 frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
                 frames_res = torch.from_numpy(frames)
                 frames_res.resize_(len(frames), 3, 240, 240)
                 frames_res = frames_res.float().cuda()
-                # print(torch.mean(feature_stractor(frames_res), 0).shape)
+                print(feaStract(frames_res).shape)  # , end="\r")
                 features.append(torch.mean(feaStract(frames_res), 0).cpu().detach().numpy())
                 clss.append(int(video.get('Action_labels')[i]))
             features = torch.from_numpy(np.asarray(features))
-            #clss = torch.from_numpy(np.asarray(clss))
+            clss = torch.from_numpy(np.asarray(clss))
 
             # FC
             print('Classifier')
@@ -65,6 +68,7 @@ def load_model(args):
 
     model_dir_str = os.path.join(args.resume, 'featureStractor')
 
+
     model_std = torch.load(os.path.join(model_dir_class, 'model_1_class.pth.tar'), map_location="cuda:"+str(args.gpu))
     classifier.load_state_dict(model_std)
     classifier = classifier.cuda()
@@ -92,10 +96,10 @@ if __name__ == '__main__':
         torch.cuda.set_device(args.gpu)
 
         print("====================> Loading Data")
-        val_loader = torch.utils.data.DataLoader(data.DATA(args, mode='valid'),
-                                                 batch_size=args.train_batch,
-                                                 num_workers=args.workers,
-                                                 shuffle=False)
+        val_loader = torch.utils.data.DataLoader(data.DATA(args, mode='train'),
+                                                   batch_size=args.train_batch,
+                                                   num_workers=args.workers,
+                                                   shuffle=False)
 
         print("====================> Loading Model")
         feaStractor, classifier = load_model(args)

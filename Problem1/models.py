@@ -47,8 +47,8 @@ class Classifier(nn.Module):
         self.fc5 = nn.Linear(128, 64)
         self.fc6 = nn.Linear(64, 11)
 
-    def forward(self, fea):
-        x = self.fc1(fea)
+    def forward(self, feat):
+        x = self.fc1(feat)
         x = self.fc2(x)
         x = self.fc3(x)
         x = self.fc4(x)

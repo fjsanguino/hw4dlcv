@@ -14,7 +14,7 @@ from sklearn.metrics import accuracy_score
 def evaluate(feature_stractor, classifier, data_loader):
     ''' set model to evaluate mode '''
     feature_stractor.eval()
-    classifier.eval()
+    rnn.eval()
     preds = []
     gts = []
     with torch.no_grad():  # do not need to caculate information for gradient during eval
@@ -37,7 +37,6 @@ def evaluate(feature_stractor, classifier, data_loader):
 
             _, pred = classifier(features)
 
-
             _, pred = torch.max(pred, dim=1)
 
             pred = pred.cpu().numpy().squeeze()
@@ -46,7 +45,7 @@ def evaluate(feature_stractor, classifier, data_loader):
             preds.append(pred)
             gts.append(gt)
 
-    gts = np.concatenate(gts)
-    preds = np.concatenate(preds)
+        gts = np.concatenate(gts)
+        preds = np.concatenate(preds)
 
-    return accuracy_score(gts, preds)
+        return accuracy_score(gts, preds)
