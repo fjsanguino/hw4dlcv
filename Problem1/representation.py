@@ -65,11 +65,11 @@ def load_model(args):
 
     model_dir_str = os.path.join(args.resume, 'featureStractor')
 
-    model_std = torch.load(os.path.join(model_dir_class, 'model_best.pth.tar'), map_location="cuda:"+str(args.gpu))
+    model_std = torch.load(os.path.join(model_dir_class, 'model_1_class.pth.tar'), map_location="cuda:"+str(args.gpu))
     classifier.load_state_dict(model_std)
     classifier = classifier.cuda()
 
-    model_std = torch.load(os.path.join(model_dir_str, 'model_best.pth.tar'), map_location="cuda:"+str(args.gpu))
+    model_std = torch.load(os.path.join(model_dir_str, 'model_1_feaStr.pth.tar'), map_location="cuda:"+str(args.gpu))
     stract.load_state_dict(model_std)
     stract = stract.cuda()
 
@@ -101,7 +101,7 @@ if __name__ == '__main__':
         feaStractor, classifier = load_model(args)
 
         print("====================> Calculating the features and writing the json")
-        output_features(feaStractor, classifier, val_loader, os.path.join(json_dir, 'features.json'))
+        output_features(classifier, feaStractor, val_loader, os.path.join(json_dir, 'features.json'))
 
     print("====================> Reading the jsons")
     #always read the data and plot it
