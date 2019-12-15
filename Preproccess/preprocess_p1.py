@@ -50,71 +50,54 @@ if __name__ == '__main__':
                                              shuffle=False)
     ''' load model '''
     print('===> prepare model ...')
-    #feature_stractor = models.ResCNNEncoder()
     feature_stractor = models.Stractor()
     feature_stractor = feature_stractor.cuda()  # load model to gpu
     feature_stractor.eval()
-    train = 0
-    if train == 1:
-        features = [] 
-        with torch.no_grad():
-        	for idx, (video, video_path) in enumerate(train_loader):
-        		for i in range(len(video_path)):
-			        #print('working in video', i + 1, '/', idx + 1)
-			        frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
 
-			        #print(frames.shape)
-			        vid = []
-			        for j in range(frames.shape[0]):
-			            im = transforms_array(frames[j])
-			            vid.append(im)
-			            #print(im.shape)
-			            #print(im)
-			        vid = torch.stack(vid)
-			        print('working in video ', video.get('Video_index')[i], ' with size ', vid.shape)
-			        #vid = torch.reshape(vid, (1, vid.shape[0], 3, 224, 224))
-			        #print(vid.shape)
-			        vid = vid.cuda()
-			        feature = feature_stractor(vid)
-			        #print(feature.shape)
-			        feature = torch.mean(feature, 0)
-			        print(feature.shape)
-			        feature = feature.cpu().detach().numpy()
-			        features.append(feature)
-		features = torch.tensor(features)
-		print('features shape', features.shape)
-		torch.save(features, 'train_p1.pt')
+    train = 1
+    if train == 1:
+        features = []
+        for idx, (video, video_path) in enumerate(train_loader):
+            for i in range(len(video_path)):
+                frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
+                vid = []
+                for j in range(frames.shape[0]):
+                    im = transforms_array(frames[j])
+                    vid.append(im)
+                vid = torch.stack(vid)
+                print('working in video ', video.get('Video_index')[i], ' with size ', vid.shape)
+                vid = vid.cuda()
+                feature = feature_stractor(vid)
+                feature = torch.mean(feature, 0)
+                print(feature.shape)
+                feature = feature.cpu().detach().numpy()
+                features.append(feature)
+        features = torch.tensor(features)
+        print('features shape', features.shape)
+        torch.save(features, 'train_p1.pt')
 
     validation = 1
     if validation == 1:
         features = []
-		with torch.no_grad():
-		    for idx, (video, video_path) in enumerate(val_loader):
+        with torch.no_grad():
+            for idx, (video, video_path) in enumerate(val_loader):
+                for i in range(len(video_path)):
+                    frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
+                    print('working in video ', video.get('Video_index')[i], ' with size ', frames.shape)
+                    vid = []
+                    for j in range(frames.shape[0]):
+                        im = transforms_array(frames[j])
+                        vid.append(im)
+                    vid = torch.stack(vid)
+                    vid = vid.cuda()
+                    feature = feature_stractor(vid)
+                    print(feature.shape)
+                    feature = torch.mean(feature, 0)
+                    print(feature.shape)
+                    feature = feature.cpu().detach().numpy()
+                    features.append(feature)
+        features = torch.tensor(features)
+        print('features shape', features.shape)
 
-			    # print('working in batch', idx + 1)
-			    for i in range(len(video_path)):
-			        # print('working in video', i + 1, '/', idx + 1)
-			        frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
-			        print('working in video ', video.get('Video_index')[i], ' with size ', frames.shape)
-			        # print(frames.shape)
-			        vid = []
-			        for j in range(frames.shape[0]):
-			            im = transforms_array(frames[j])
-			            vid.append(im)
-			            # print(im.shape)
-			            # print(im)
-			        vid = torch.stack(vid)
-			        # vid = torch.reshape(vid, (1, vid.shape[0], 3, 224, 224))
-			        # print(vid.shape)
-			        vid = vid.cuda()
-			        feature = feature_stractor(vid)
-			        print(feature.shape)
-			        feature = torch.mean(feature, 0)
-			        print(feature.shape)
-			        feature = feature.cpu().detach().numpy()
-			        features.append(feature)
-			features = torch.tensor(features)
-			print('features shape', features.shape)
-
-			torch.save(features, 'valid_p1.pt')
+        torch.save(features, 'valid_p1.pt')
 
