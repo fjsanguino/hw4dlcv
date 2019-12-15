@@ -24,47 +24,72 @@ def transforms_array(array):
     ])
     return transform(array)
 
+def batch_padding(batch_fea, batch_cls):
+    n_frames = [fea.shape[0] for fea in batch_fea]
+    perm_index = np.argsort(n_frames)[::-1]
+
+    # sort by sequence length
+    batch_fea_sort = [batch_fea[i] for i in perm_index]
+    #print(len(batch_fea_sort))
+    n_frames = [fea.shape[0] for fea in batch_fea_sort]
+    padded_sequence = nn.utils.rnn.pad_sequence(batch_fea_sort, batch_first=True)
+    label = torch.LongTensor(np.array(batch_cls)[perm_index])
+    return padded_sequence, label, n_frames
 
 
-def evaluate(feature_stractor, rnn, data_loader):
+
+def evaluate(feature_stractor, rnn, data_loader, batch_size):
     ''' set model to evaluate mode '''
-    feature_stractor.eval()
     rnn.eval()
-    preds = []
+    feature_stractor.eval()
+    iters = 0
     gts = []
-    i = 0
-    with torch.no_grad():  # do not need to caculate information for gradient during eval
+    preds = []
+    with torch.no_grad():
         for idx, (video, video_path) in enumerate(data_loader):
+            #print(iters)
+            iters += 1
+            batch_img = []
+            batch_gt = []
+            for i in range(len(video_path)):
+                frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
 
-            frames = readShortVideo(video_path[0], video.get('Video_category')[0], video.get('Video_name')[0])
-            # print(frames.shape)
-            vid = []
-            for i in range(frames.shape[0]):
-                im = transforms_array(frames[i])
-                vid.append(im)
-            vid = torch.stack(vid)
-            vid = torch.reshape(vid, (1, vid.shape[0], 3, 224, 224))
+                vid = []
+                for j in range(frames.shape[0]):
+                    im = transforms_array(frames[j])
+                    vid.append(im)
+                vid = torch.stack(vid).cuda()
 
-            vid = vid.cuda()
+                with torch.no_grad():
+                    feature = feature_stractor(vid)
 
-            _, pred = rnn(feature_stractor(vid))
+                batch_img.append(feature)
+
+                gt = (int(video.get('Action_labels')[i]))
+                batch_gt.append(gt)
+
+
+            sequence, label, n_frames = batch_padding(batch_img, batch_gt)
+            #print(sequence.shape)
+
+            _, pred = rnn(sequence, n_frames)
+
             _, pred = torch.max(pred, dim=1)
 
-            gt = int(video.get('Action_labels')[0])
-            gt = torch.from_numpy(np.expand_dims(np.asarray(gt), axis=0))
+            batch_gt = torch.from_numpy(np.asarray(batch_gt))
+            # print(batch_gt.shape)
 
             pred = pred.cpu().numpy().squeeze()
-            gt = gt.numpy().squeeze()
+            batch_gt = batch_gt.numpy().squeeze()
 
             preds.append(pred)
-            gts.append(gt)
-            #print(preds)
-            #print(gts)
+            gts.append(batch_gt)
 
 
 
-        #gts = np.concatenate(gts)
-        #preds = np.concatenate(preds)
+        if batch_size != 1:
+            gts = np.concatenate(gts)
+            preds = np.concatenate(preds)
     print(preds)
     return accuracy_score(gts, preds)
 

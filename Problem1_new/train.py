@@ -42,7 +42,7 @@ if __name__ == '__main__':
     train_loader = torch.utils.data.DataLoader(data.DATA(args, mode='train'),
                                                batch_size=args.train_batch,
                                                num_workers=args.workers,
-                                               shuffle=True)
+                                               shuffle=False)
     val_loader = torch.utils.data.DataLoader(data.DATA(args, mode='valid'),
                                              batch_size=args.train_batch,
                                              num_workers=args.workers,
@@ -71,14 +71,11 @@ if __name__ == '__main__':
 
             iters += 1
 
-            #FC
-            print('Classifier')
             features, clss = features.cuda(), clss.cuda()
 
             _, output = classifier(features)
             loss = criterion(output, clss)
 
-            print('Back propagation')
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -86,7 +83,7 @@ if __name__ == '__main__':
             writer.add_scalar('loss', loss.data.cpu().numpy(), iters)
             train_info += ' loss: {:.4f}'.format(loss.data.cpu().numpy())
 
-            print(train_info)
+            #print(train_info)
         if epoch % args.val_epoch == 0:
             ''' evaluate the model '''
             acc = evaluate(classifier, val_loader)

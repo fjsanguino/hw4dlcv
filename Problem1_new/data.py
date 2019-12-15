@@ -51,13 +51,14 @@ class DATA(Dataset):
         for x, y in self.dic.items():
             video[x] = y[idx]
 
-        id = video.get('Video_index')
-        print(id, idx)
+        id = int(video.get('Video_index'))
+        #print(id, idx)
 
-        feature = self.features[id]
+        feature = self.features[id-1]
+        #print(feature.shape)
 
-        cls = int(video.get('Action_labels')[id])
+        cls = int(video.get('Action_labels'))
 
-
+        #print('class', id, cls)
 
         return feature, cls

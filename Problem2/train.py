@@ -33,7 +33,17 @@ def transforms_array(array):
     ])
     return transform(array)
 
+def batch_padding(batch_fea, batch_cls):
+    n_frames = [fea.shape[0] for fea in batch_fea]
+    perm_index = np.argsort(n_frames)[::-1]
 
+    # sort by sequence length
+    batch_fea_sort = [batch_fea[i] for i in perm_index]
+    #print(len(batch_fea_sort))
+    n_frames = [fea.shape[0] for fea in batch_fea_sort]
+    padded_sequence = nn.utils.rnn.pad_sequence(batch_fea_sort, batch_first=True)
+    label = torch.LongTensor(np.array(batch_cls)[perm_index])
+    return padded_sequence, label, n_frames
 
 if __name__ == '__main__':
 
@@ -43,13 +53,6 @@ if __name__ == '__main__':
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
-    feaStr_path = os.path.join(args.save_dir, 'cnn')
-    if not os.path.exists(feaStr_path):
-        os.makedirs(feaStr_path)
-
-    class_path = os.path.join(args.save_dir, 'rnn')
-    if not os.path.exists(class_path):
-        os.makedirs(class_path)
 
     ''' setup GPU '''
     torch.cuda.set_device(args.gpu)
@@ -71,26 +74,17 @@ if __name__ == '__main__':
                                              shuffle=False)
     ''' load model '''
     print('===> prepare model ...')
-    feature_stractor = models.ResCNNEncoder()
-    feature_stractor.cuda()  # load model to gpu
-    params_to_update = feature_stractor.parameters()
-    params_to_update_str = []
-    for name, param in feature_stractor.named_parameters():
-        if param.requires_grad == True:
-            params_to_update_str.append(param)
+    feature_stractor = models.Stractor()
+    feature_stractor = feature_stractor.cuda()  # load model to gpu
 
     rnn = models.DecoderRNN()
     rnn = rnn.cuda()
-    params_to_update_rnn = []
-    for name, param in rnn.named_parameters():
-        if param.requires_grad == True:
-            params_to_update_rnn.append(param)
 
     ''' define loss '''
     criterion = nn.CrossEntropyLoss()
 
     ''' setup optimizer '''
-    optimizer = torch.optim.Adam(params_to_update_rnn + params_to_update_str, lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(rnn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
 
     ''' setup tensorboard '''
@@ -100,43 +94,48 @@ if __name__ == '__main__':
     loss_write = 0
     for epoch in range(1, args.epoch+1):
         rnn.train()
-        feature_stractor.train()
+        feature_stractor.eval()
         for idx, (video, video_path) in enumerate(train_loader):
-            #max_dim = 0
-            #for i in range(len(video_path)):
-                #frames = readShortVideo(video_path[0], video.get('Video_category')[0], video.get('Video_name')[0])
-                #max_dim = np.maximum(max_dim, frames.shape[0])
-            #print(max_dim)
 
 
             train_info = 'Epoch: [{0}][{1}/{2}]'.format(epoch, idx + 1, len(train_loader))
 
             iters += 1
+            batch_img = []
+            batch_cls = []
+            for i in range(len(video_path)):
+                #print(i)
+                frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
+                #print(video.get('Video_index')[i])
+                #print('frames shape', frames.shape)
+                vid = []
+                for j in range(frames.shape[0]):
+                    im = transforms_array(frames[j])
+                    vid.append(im)
+                vid = torch.stack(vid).cuda()
+                print('video shape', vid.shape, end='\r')
+                #vid = torch.reshape(vid, (1, vid.shape[0], 3, 224, 224))
+                #print(vid.shape)
+                with torch.no_grad():
+                    feature = feature_stractor(vid)
+                #print(feature.shape)
+                batch_img.append(feature)
 
-            #for i in range(len(video_path)):
+                cls = (int(video.get('Action_labels')[i]))
+                batch_cls.append(cls)
 
-            frames = readShortVideo(video_path[0], video.get('Video_category')[0], video.get('Video_name')[0])
-            #print(frames.shape)
-            vid = []
-            for i in range(frames.shape[0]):
-                im = transforms_array(frames[i])
-                vid.append(im)
-                #print(im.shape)
-                #print(im)
-            vid = torch.stack(vid)
-            vid = torch.reshape(vid, (1, vid.shape[0], 3, 224, 224))
-            #print(vid.shape)
-            cls = (int(video.get('Action_labels')[0]))
-            #print(cls)
+            #print((batch_cls[0].type))
+            #print(len(batch_img))
 
+            sequence, label, n_frames = batch_padding(batch_img, batch_cls)
+            print('sequence shape', sequence.shape,  end='\r')
 
-            cls = torch.from_numpy(np.expand_dims(np.asarray(cls), axis=0))
+            _, pred = rnn(sequence, n_frames)
+            #print(pred.shape)
 
-            vid, cls  = vid.cuda(),  cls.cuda()
-
-            _, pred = rnn(feature_stractor(vid))
-            #print (pred.shape)
-
+            #print(batch_cls)
+            batch_cls = torch.from_numpy(np.asarray(batch_cls)).cuda()
+            #print(batch_cls.shape)
 
 
 
@@ -145,38 +144,28 @@ if __name__ == '__main__':
             #cls = cls.cuda()
 
 
-            loss = criterion(pred, cls)
+            loss = criterion(pred, batch_cls)
 
             #print('Back propagation')
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            #loss_write = loss_write + loss
-            #if iters % 50 == 0:
-            #    loss_write = loss_write/50
-            #    writer.add_scalar('loss', loss_write.data.cpu().numpy(), iters)
-            #    train_info += ' loss: {:.4f}'.format(loss.data.cpu().numpy())
-            #    print(train_info)
-            #    loss_write = 0
-
             train_info += ' loss: {:.4f}'.format(loss.data.cpu().numpy())
 
             print(train_info)#, end = '\r')
         if epoch % args.val_epoch == 0:
             ''' evaluate the model '''
-            acc = evaluate(feature_stractor, rnn, val_loader)
+            acc = evaluate(feature_stractor, rnn, val_loader, args.train_batch)
             writer.add_scalar('val_acc', acc, iters)
             print('Epoch: [{}] ACC:{}'.format(epoch, acc))
 
             ''' save best model '''
             if acc > best_acc:
-                save_model(feature_stractor, os.path.join(feaStr_path, 'model_best_cnn.pth.tar'))
-                save_model(rnn, os.path.join(class_path, 'model_best_rnn.pth.tar'))
+                save_model(rnn, os.path.join(args.save_dir, 'model_best_rnn.pth.tar'))
                 best_acc = acc
 
         ''' save model '''
-        save_model(feature_stractor, os.path.join(feaStr_path, 'model_{}_cnn.pth.tar'.format(epoch)))
-        save_model(rnn, os.path.join(class_path, 'model_{}_rnn.pth.tar'.format(epoch)))
+        save_model(rnn, os.path.join(args.save_dir, 'model_{}_rnn.pth.tar'.format(epoch)))
 
 
