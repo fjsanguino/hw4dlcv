@@ -35,7 +35,7 @@ def output_features(classi, data_loader, json_dir):
                 #print(np.asarray(features_flt).shape)
                 clss = []
                 for cls in gt:
-                    clss.append(float(cls))
+                    clss.append(int(cls))
                 print(np.asarray(clss).shape)
 
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     json_dir = os.path.join(args.json_dir)
 
-    if (not os.path.exists(os.path.join(json_dir, 'features.json'))):
+    if (not os.path.exists(os.path.join(json_dir, 'ol.json'))):
 
         torch.cuda.set_device(args.gpu)
 

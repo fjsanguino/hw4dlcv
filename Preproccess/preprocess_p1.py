@@ -24,6 +24,8 @@ def transforms_array(array):
     ])
     return transform(array)
 
+def save_model(model, save_path):
+    torch.save(model.state_dict(), save_path)
 
 
 if __name__ == '__main__':
@@ -102,3 +104,4 @@ if __name__ == '__main__':
 
         torch.save(features, 'valid_p1.pt')
 
+    save_model(feature_stractor, os.path.join(args.save_dir, 'model_best_fea.pth.tar'))

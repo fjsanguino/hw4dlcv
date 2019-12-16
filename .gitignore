@@ -1,4 +1,9 @@
 hw4_data
 HW4.pdf
 *.pth.tar
+*.json
 !Problem1/log/Classifier/model_1_class.pth.tar
+!Problem2/log/model_best_rnn.pth.tar
+!Problem1_new/log/model_best_class.pth.tar
+
+

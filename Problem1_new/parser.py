@@ -21,9 +21,9 @@ def arg_parse():
                         help="num of validation iterations")
     parser.add_argument('--val_epoch', default=1, type=int,
                         help="num of validation iterations")
-    parser.add_argument('--train_batch', default=31, type=int,
+    parser.add_argument('--train_batch', default=64, type=int,
                         help="train batch size")
-    parser.add_argument('--test_batch', default=31, type=int,
+    parser.add_argument('--test_batch', default=64, type=int,
                         help="test batch size")
     parser.add_argument('--lr', default=0.00002, type=float,
                         help="initial learning rate")

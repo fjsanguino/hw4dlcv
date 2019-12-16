@@ -10,35 +10,70 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import torchvision.transforms as transforms
+import torch.nn as nn
 
 
-def output_features(classi, feaStract, data_loader, json_dir):
+def transforms_array(array):
+    MEAN = [0.5, 0.5, 0.5]
+    STD = [0.5, 0.5, 0.5]
+    transform = transforms.Compose([
+        transforms.ToPILImage(mode='RGB'),
+        transforms.Resize(224),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),  # (H,W,C)->(C,H,W), [0,255]->[0, 1.0] RGB->RGB
+        transforms.Normalize(MEAN, STD)
+    ])
+    return transform(array)
+
+def batch_padding(batch_fea, batch_cls):
+    n_frames = [fea.shape[0] for fea in batch_fea]
+    perm_index = np.argsort(n_frames)[::-1]
+
+    # sort by sequence length
+    batch_fea_sort = [batch_fea[i] for i in perm_index]
+    #print(len(batch_fea_sort))
+    n_frames = [fea.shape[0] for fea in batch_fea_sort]
+    padded_sequence = nn.utils.rnn.pad_sequence(batch_fea_sort, batch_first=True)
+    label = torch.LongTensor(np.array(batch_cls)[perm_index])
+    return padded_sequence, label, n_frames
+
+
+def output_features(rnn, feature_stractor, data_loader, json_dir):
     ''' set model to evaluate mode '''
-    classi.eval()
-    feaStract.eval()
+    rnn.eval()
+    feature_stractor.eval()
+    iters  = 0
     with torch.no_grad():  # do not need to caculate information for gradient during eval
         data = []
         for idx, (video, video_path) in enumerate(data_loader):
-            features = []
-            clss = []
-            print('Preprocessing the data')
+
+            print(iters)
+            iters += 1
+            batch_img = []
+            batch_gt = []
             for i in range(len(video_path)):
-                # print('working ', i)
                 frames = readShortVideo(video_path[i], video.get('Video_category')[i], video.get('Video_name')[i])
-                frames_res = torch.from_numpy(frames)
-                frames_res.resize_(len(frames), 3, 240, 240)
-                frames_res = frames_res.float().cuda()
-                # print(torch.mean(feature_stractor(frames_res), 0).shape)
-                features.append(torch.mean(feaStract(frames_res), 0).cpu().detach().numpy())
-                clss.append(int(video.get('Action_labels')[i]))
-            features = torch.from_numpy(np.asarray(features))
-            clss = torch.from_numpy(np.asarray(clss))
 
-            # FC
-            print('Classifier')
-            features = features.cuda()
+                vid = []
+                for j in range(frames.shape[0]):
+                    im = transforms_array(frames[j])
+                    vid.append(im)
+                vid = torch.stack(vid).cuda()
 
-            feat, _ = classi(features)
+                with torch.no_grad():
+                    feature = feature_stractor(vid)
+
+                batch_img.append(feature)
+
+                gt = (int(video.get('Action_labels')[i]))
+                batch_gt.append(gt)
+
+            sequence, label, n_frames = batch_padding(batch_img, batch_gt)
+            # print(sequence.shape)
+
+            feat, _ = rnn(sequence, n_frames)
+
             features_flt = []
             for imgs in feat:
                 imgs_feature = []
@@ -49,7 +84,7 @@ def output_features(classi, feaStract, data_loader, json_dir):
             ##strore the values of the pred.
 
             for i in range(0, len(features_flt)):
-                data.append([list(features_flt[i]), clss[i]])
+                data.append([list(features_flt[i]), batch_gt[i]])
 
         data = list(data)
         with open(json_dir, 'w') as outfile:
@@ -58,28 +93,25 @@ def output_features(classi, feaStract, data_loader, json_dir):
 
 
 def load_model(args):
-    classifier = models.Classifier()
-    stract = models.Stractor()
+    rnn = models.DecoderRNN()
 
-    model_dir_class = os.path.join(args.resume, 'Classifier')
+    model_dir_rnn = args.resume
 
-    model_dir_str = os.path.join(args.resume, 'featureStractor')
+    model_std = torch.load(os.path.join(model_dir_rnn, 'model_best_rnn.pth.tar'), map_location="cuda:"+str(args.gpu))
+    rnn.load_state_dict(model_std)
+    rnn = rnn.cuda()
 
-    model_std = torch.load(os.path.join(model_dir_class, 'model_best.pth.tar'), map_location="cuda:"+str(args.gpu))
-    classifier.load_state_dict(model_std)
-    classifier = classifier.cuda()
-
-    model_std = torch.load(os.path.join(model_dir_str, 'model_best.pth.tar'), map_location="cuda:"+str(args.gpu))
-    stract.load_state_dict(model_std)
-    stract = stract.cuda()
+    feature_stractor = models.Stractor()
+    feature_stractor = feature_stractor.cuda()
 
 
     #model = torch.nn.DataParallel(model,
                                   #device_ids=list(range(torch.cuda.device_count()))).cuda()
 
-    return stract, classifier
+    return feature_stractor, rnn
 
 if __name__ == '__main__':
+    print('-----------------------------------------------Representation-------------------------------------------------------')
 
 
     plt.title("Simple Plot")
@@ -98,10 +130,10 @@ if __name__ == '__main__':
                                                  shuffle=False)
 
         print("====================> Loading Model")
-        feaStractor, classifier = load_model(args)
+        feature_stractor, rnn = load_model(args)
 
         print("====================> Calculating the features and writing the json")
-        output_features(feaStractor, classifier, val_loader, os.path.join(json_dir, 'features.json'))
+        output_features(rnn, feature_stractor, val_loader, os.path.join(json_dir, 'features.json'))
 
     print("====================> Reading the jsons")
     #always read the data and plot it
@@ -116,12 +148,12 @@ if __name__ == '__main__':
         cls.append(d[1])
 
     fea_test = []
-    for i in range(0, 10):
+    for i in range(0, 5):
         fea_test.append(fea[i])
 
     print("====================> Calculating TSNE")
 
-    fea_embedded = TSNE(n_components=2, n_iter=300).fit_transform(fea_test)
+    fea_embedded = TSNE(n_components=2, n_iter=300).fit_transform(fea)
 
     print("====================> Calculating the colors")
     clr = []

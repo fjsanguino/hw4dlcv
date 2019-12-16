@@ -13,6 +13,8 @@ import torch.optim as optim
 
 
 from tensorboardX import SummaryWriter
+import matplotlib.pyplot as plt
+
 
 
 def save_model(model, save_path):
@@ -64,6 +66,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(os.path.join(args.save_dir, 'train_info'))
     iters = 0
     best_acc = 0
+    losses = []
     for epoch in range(1, args.epoch+1):
         classifier.train()
         for idx, (features, clss) in enumerate(train_loader):
@@ -81,6 +84,7 @@ if __name__ == '__main__':
             optimizer.step()
 
             writer.add_scalar('loss', loss.data.cpu().numpy(), iters)
+            losses.append(loss)
             train_info += ' loss: {:.4f}'.format(loss.data.cpu().numpy())
 
             #print(train_info)
@@ -97,5 +101,12 @@ if __name__ == '__main__':
 
         ''' save model '''
         save_model(classifier, os.path.join(args.save_dir, 'model_{}_class.pth.tar'.format(epoch)))
+
+        plt.plot(range(len(losses)), losses)
+        print(len(losses))
+        if not os.path.exists('output'):
+            os.makedirs('output')
+
+        plt.savefig('output/train_loss.png')
 
 

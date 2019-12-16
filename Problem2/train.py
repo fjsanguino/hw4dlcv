@@ -46,6 +46,7 @@ def batch_padding(batch_fea, batch_cls):
     return padded_sequence, label, n_frames
 
 if __name__ == '__main__':
+    print('-----------------------------------------------Train-------------------------------------------------------')
 
     args = parser.arg_parse()
 
@@ -162,7 +163,9 @@ if __name__ == '__main__':
 
             ''' save best model '''
             if acc > best_acc:
+                print('saved model', epoch)
                 save_model(rnn, os.path.join(args.save_dir, 'model_best_rnn.pth.tar'))
+                save_model(feature_stractor, os.path.join(args.save_dir, 'model_best_fea.pth.tar'))
                 best_acc = acc
 
         ''' save model '''

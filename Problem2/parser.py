@@ -17,7 +17,7 @@ def arg_parse():
     parser.add_argument('--gpu', default=0, type=int,
                         help='gpu device ids for CUDA_VISIBLE_DEVICES')
 
-    parser.add_argument('--epoch', default=100, type=int,
+    parser.add_argument('--epoch', default=5, type=int,
                         help="num of validation iterations")
     parser.add_argument('--val_epoch', default=1, type=int,
                         help="num of validation iterations")

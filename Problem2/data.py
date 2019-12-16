@@ -25,7 +25,7 @@ class DATA(Dataset):
 
         ''' read the data list '''
         self.label_path = os.path.join(self.video_dir, 'label')
-        self.label_path = os.path.join(self.label_path, 'gt_' + mode + '_orig.csv')
+        self.label_path = os.path.join(self.label_path, 'gt_' + mode + '.csv')
 
         self.video_path = os.path.join(self.video_dir, 'video')
         self.video_path = os.path.join(self.video_path, mode)

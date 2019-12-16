@@ -3,6 +3,28 @@ import torch.nn as nn
 import torchvision
 from torchvision import datasets, models, transforms
 
+class Stractor(nn.Module):
+
+    def __init__(self):
+        super(Stractor, self).__init__()
+
+        ''' declare layers used in this network'''
+        # first layer: resnet18 gets a pretrained model
+        self.resnet50 = models.resnet50(pretrained=True)
+        #        model_ft = models.resnet18(pretrained=use_pretrained)
+        num_ftrs = self.resnet50.fc.in_features
+        self.resnet50.fc = nn.Linear(num_ftrs, 2048)
+        # or instead of the above function you can use:
+        # self.resnet18.fc = Identity()
+        # self.resnet18.avgPool = Identity()
+
+
+
+    def forward(self, img):
+        x = self.resnet50(img)
+
+
+        return x
 
 
 class Classifier(nn.Module):
